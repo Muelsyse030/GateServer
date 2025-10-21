@@ -1,0 +1,22 @@
+#include "CServer.h"
+
+CServer::CServer(boost::asio::io_context& ioc, unsigned short& port) : 
+	_ioc(ioc) , _acceptor(ioc,tcp::endpoint(tcp::v4() , port)) , _socket(ioc){
+	
+}
+void CServer::Start() {
+	auto self = shared_from_this();
+	_acceptor.async_accept(_socket, [self](beast::error_code ec) {
+		try {
+			//出错放弃链接 继续监听其他链接
+			if (ec) {
+				self->Start();
+				return;
+			}
+			std::
+		}
+		catch (std::exception & exp) {
+		
+			}
+		});
+}
