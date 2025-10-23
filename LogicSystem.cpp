@@ -1,6 +1,7 @@
 
 #include "LogicSystem.h"
 #include "HttpConnection.h"
+#include "VerifyGrpcClient.h"
 
 void LogicSystem::RegGet(std::string url, HttpHandler handler) {
     _get_handlers.insert(std::make_pair(url , handler));
@@ -42,6 +43,7 @@ LogicSystem::LogicSystem() {
             return true;
         }
         auto email = src_root["email"].asString();
+        GetVarifyRsp rsp = VerifyGrpcClient::GetInstance()->GetVarifyCode(email);
         std::cout << "email is:" << email << std::endl;
         root["error"] = 0;
         root["email"] = src_root["email"];
@@ -49,6 +51,23 @@ LogicSystem::LogicSystem() {
         beast::ostream(connection->_response.body()) << jsonstr;
         return true;
     });
+    RegPost("/user_register", [](std::shared_ptr<HttpConnection> connection) {
+        auto body_str = boost::beast::buffers_to_string(connection->_request.body().data());
+        std::cout << "reccive body is " << body_str << std::endl;
+        connection->_response.set(http::field::content_type, "text/json");
+        Json::Value root;
+        Json::Reader reader;
+        Json::Value src_root;
+        bool parse_success = reader.parse(body_str, src_root);
+        if (!parse_success) {
+            std::cout << "Failed to parse JSON data" << std::endl;
+            root["error"] = ErrorCode::Error_Json;
+            std::string jsonstr = root.toStyledString();
+            beast::ostream(connection->_response.body()) << jsonstr;
+            return true;
+        }
+
+        });
 }
 bool LogicSystem::HandleGet(std::string path, std::shared_ptr<HttpConnection> connection) {
     if (_get_handlers.find(path) == _get_handlers.end()) {
