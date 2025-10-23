@@ -10,10 +10,10 @@ struct Sectioninfo {
 		_section_datas.clear();
 	}
 	Sectioninfo& operator=(const Sectioninfo& src) {
-		if (&src != this) {
-			return *this;
+		if (this != &src) {  
+			this->_section_datas = src._section_datas;
 		}
-		this->_section_datas = src._section_datas;
+		return *this;
 	}
 	Sectioninfo(const Sectioninfo& src) {
 		_section_datas = src._section_datas;
@@ -41,14 +41,20 @@ public:
 		}
 		return it->second;
 	}
+	
+	static ConfigMgr& GetInstance()
+	{
+		static ConfigMgr cfg_mgr;
+		return cfg_mgr;
+	}
+
 	ConfigMgr(const ConfigMgr& src) {
 		_config_maps = src._config_maps;
 	}
 	ConfigMgr& operator=(const ConfigMgr& src) {
-		if (&src != this) {
-			return *this;
+		if (this != &src) {
+			this->_config_maps = src._config_maps;
 		}
-		this->_config_maps = src._config_maps;
 		return *this;
 	}
 	ConfigMgr();
