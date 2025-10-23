@@ -15,6 +15,8 @@
 #include "boost/filesystem.hpp"
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/ini_parser.hpp"
+#include <mutex>
+#include <condition_variable>
 
 
 
@@ -29,5 +31,3 @@ enum ErrorCode {
 	Error_Json = 1001,
 	RPCFailed = 1002,
 };
-class ConfigMgr;
-extern ConfigMgr gCgonfigMgr;
