@@ -1,12 +1,17 @@
 #include "RedisMgr.h"
 #include "ConfigMgr.h"
 
+
 RedisMgr::RedisMgr() {
-	
+	auto& gCfgMgr = ConfigMgr::GetInstance();
+	auto host = gCfgMgr["Redis"]["Host"];
+	auto port = gCfgMgr["Redis"]["Port"];
+	auto pwd = gCfgMgr["Redis"]["Passwd"];
+	_con_pool.reset(new RedisConPool(5, host.c_str(), atoi(port.c_str()), pwd.c_str()));
 }
 
 RedisMgr::~RedisMgr() {
-
+	Close();
 }
 
 bool RedisMgr::Connect(const std::string & host, int port){
@@ -21,24 +26,32 @@ bool RedisMgr::Connect(const std::string & host, int port){
 	return true;
 }
 
-bool RedisMgr::Get(const std::string& key, std::string& value){
-	this->_reply = (redisReply*)redisCommand(this->_connect, "GET %s", key.c_str());
-	if (this->_reply == NULL) {
+bool RedisMgr::Get(const std::string& key, std::string& value)
+{
+	auto connect = _con_pool->getConnection();
+	if (connect == nullptr) {
+		return false;
+	}
+	auto reply = (redisReply*)redisCommand(connect, "GET %s", key.c_str());
+	if (reply == NULL) {
 		std::cout << "[ GET  " << key << " ] failed" << std::endl;
-		freeReplyObject(this->_reply);
+		freeReplyObject(reply);
+		_con_pool->returnConnection(connect);
 		return false;
 	}
 
-	if (this->_reply->type != REDIS_REPLY_STRING) {
+	if (reply->type != REDIS_REPLY_STRING) {
 		std::cout << "[ GET  " << key << " ] failed" << std::endl;
-		freeReplyObject(this->_reply);
+		freeReplyObject(reply);
+		_con_pool->returnConnection(connect);
 		return false;
 	}
 
-	value = this->_reply->str;
-	freeReplyObject(this->_reply);
+	value = reply->str;
+	freeReplyObject(reply);
 
 	std::cout << "Succeed to execute command [ GET " << key << "  ]" << std::endl;
+	_con_pool->returnConnection(connect);
 	return true;
 }
 
@@ -231,5 +244,5 @@ bool RedisMgr::ExistsKey(const std::string& key){
 }
 
 void RedisMgr::Close(){
-	redisFree(_connect);
+	_con_pool->Close();
 }
