@@ -18,10 +18,7 @@
 #include <mutex>
 #include <condition_variable>
 //摸个鱼
-
-
-
-
+//出bug了，还未找到修复方法
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
