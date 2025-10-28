@@ -28,4 +28,8 @@ enum ErrorCode {
 	Success = 0,
 	Error_Json = 1001,
 	RPCFailed = 1002,
+	VarifyExpired = 1003,
+	Error_VarifyCode = 1004,
+	Error_UserExist = 1005,
 };
+#define CODEPREFIX "code_"

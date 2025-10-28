@@ -2,6 +2,7 @@
 #include "LogicSystem.h"
 #include "HttpConnection.h"
 #include "VerifyGrpcClient.h"
+#include "RedisMgr.h"
 
 void LogicSystem::RegGet(std::string url, HttpHandler handler) {
     _get_handlers.insert(std::make_pair(url , handler));
@@ -66,6 +67,32 @@ LogicSystem::LogicSystem() {
             beast::ostream(connection->_response.body()) << jsonstr;
             return true;
         }
+        std::string varifycode;
+        bool b_get_vafirycode = RedisMgr::GetInstance()->Get(CODEPREFIX + src_root["email"].asString(), varifycode);
+        if (!b_get_vafirycode) {
+            std::cout << "Failed to get varifycode" << std::endl;
+            root["error"] = ErrorCode::VarifyExpired;
+            std::string jsonstr = root.toStyledString();
+            beast::ostream(connection->_response.body()) << jsonstr;
+            return true;
+        }
+        if (varifycode != src_root["varifycode"].asString()) {
+            std::cout << "Failed to check varifycode" << std::endl;
+            root["error"] = ErrorCode::Error_VarifyCode;
+            std::string jsonstr = root.toStyledString();
+            beast::ostream(connection->_response.body()) << jsonstr;
+            return true;
+        }
+        
+        root["error"] = 0;
+        root["email"] = src_root["email"];
+        root["user"] = src_root["user"].asString();
+        root["passwd"] = src_root["passwd"].asString();
+        root["confirm"] = src_root["confirm"].asString();
+        root["varifycode"] = src_root["varifycode"].asString();
+        std::string jsonstr = root.toStyledString();
+        beast::ostream(connection->_response.body()) << jsonstr;
+        return true;
 
         });
 }
