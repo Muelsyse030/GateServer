@@ -3,13 +3,31 @@ using namespace std;
 
 MysqlDAO::MysqlDAO(){
     auto& cfg = ConfigMgr::GetInstance();
-    const auto& host = cfg["Mysql"]["Host"];
-    const auto& port = cfg["Mysql"]["Port"];
-    const auto& pwd = cfg["Mysql"]["Passwd"];
-    const auto& schema = cfg["Mysql"]["Schema"];
-    const auto& user = cfg["Mysql"]["User"];
-    // MySqlPool 构造函数需要 host(string), port(unsigned int), user, pass, schema, poolSize
-    _pool.reset(new MySqlPool(host,static_cast<unsigned int>(std::stoi(port)),user,pwd,schema,5));
+    const std::string host = cfg["Mysql"]["host"];
+    const std::string port_str = cfg["Mysql"]["port"];
+    const std::string pwd = cfg["Mysql"]["passwd"];
+    const std::string schema = cfg["Mysql"]["schema"];
+    const std::string user = cfg["Mysql"]["user"];
+
+    if (port_str.empty()) {
+        throw std::runtime_error("Config error: missing Mysql.Port");
+    }
+
+    unsigned long port_ul = 0;
+    try {
+        size_t idx = 0;
+        port_ul = std::stoul(port_str, &idx, 10);
+        if (idx != port_str.length()) {
+            throw std::invalid_argument("Mysql.Port contains invalid characters");
+        }
+        if (port_ul > 65535) {
+            throw std::out_of_range("Mysql.Port out of range");
+        }
+    } catch (const std::exception& e) {
+        throw std::runtime_error(std::string("Invalid Mysql.Port in config: ") + e.what());
+    }
+
+    _pool.reset(new MySqlPool(host, static_cast<unsigned int>(port_ul), user, pwd, schema, 5));
 }
 MysqlDAO::~MysqlDAO(){
     _pool->close();

@@ -19,6 +19,10 @@ public:
             for (int i = 0; i < poolSize_; ++i) {
                 auto session = std::make_unique<mysqlx::Session>(host_, port_, user_, pass_);
                 session->sql("USE " + schema_).execute();
+
+                session->sql("SELECT 1").execute();
+                std::cout << "MySQL connection[" << i << "] OK" << std::endl;
+
                 pool_.push(std::move(session));
             }
             std::cout << "MySQL X DevAPI pool initialized with " << poolSize_ << " connections.\n";
