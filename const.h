@@ -31,5 +31,6 @@ enum ErrorCode {
 	VarifyExpired = 1003,
 	Error_VarifyCode = 1004,
 	Error_UserExist = 1005,
+	PasswdErr = 1006,
 };
 #define CODEPREFIX "code_"
