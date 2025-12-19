@@ -1,74 +1,33 @@
 #pragma once
 #include <iostream>
-#include <mysqlx/xdevapi.h>
 #include <queue>
-#include <memory>
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <string>
 
-class MySqlPool {
+// Windows 下必须先包含 winsock2
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+#include <mysql/mysql.h>
+
+class MysqlPool {
 public:
-    MySqlPool(const std::string& host, unsigned int port,
+    MysqlPool(const std::string& host, unsigned int port,
         const std::string& user, const std::string& pass,
-        const std::string& schema, int poolSize)
-        : host_(host), port_(port), user_(user), pass_(pass),
-        schema_(schema), poolSize_(poolSize), stop_(false)
-    {
-        try {
-            for (int i = 0; i < poolSize_; ++i) {
-                auto session = std::make_unique<mysqlx::Session>(host_, port_, user_, pass_);
-                session->sql("USE " + schema_).execute();
+        const std::string& schema, int poolSize);
 
-                session->sql("SELECT 1").execute();
-                std::cout << "MySQL connection[" << i << "] OK" << std::endl;
+    ~MysqlPool();
 
-                pool_.push(std::move(session));
-            }
-            std::cout << "MySQL X DevAPI pool initialized with " << poolSize_ << " connections.\n";
-        }
-        catch (const mysqlx::Error& err) {
-            std::cerr << "MySQL pool init failed: " << err.what() << std::endl;
-        }
-        catch (std::exception& ex) {
-            std::cerr << "Exception: " << ex.what() << std::endl;
-        }
-    }
+    // 获取一个原生 MySQL 连接
+    MYSQL* getConnection();
 
-    std::unique_ptr<mysqlx::Session> getConnection() {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cond_.wait(lock, [this] { return stop_ || !pool_.empty(); });
+    // 归还连接
+    void returnConnection(MYSQL* conn);
 
-        if (stop_) return nullptr;
-
-        auto conn = std::move(pool_.front());
-        pool_.pop();
-        return conn;
-    }
-
-    void returnConnection(std::unique_ptr<mysqlx::Session> conn) {
-        std::unique_lock<std::mutex> lock(mutex_);
-        if (stop_) return;
-
-        pool_.push(std::move(conn));
-        cond_.notify_one();
-    }
-
-    void close() {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            stop_ = true;
-            while (!pool_.empty()) {
-                pool_.pop();
-            }
-        }
-        cond_.notify_all();
-        std::cout << "MySQL connection pool closed.\n";
-    }
-
-    ~MySqlPool() {
-        close();
-    }
+    // 关闭连接池
+    void close();
 
 private:
     std::string host_;
@@ -78,7 +37,7 @@ private:
     std::string schema_;
     int poolSize_;
 
-    std::queue<std::unique_ptr<mysqlx::Session>> pool_;
+    std::queue<MYSQL*> pool_; // 存储原生指针
     std::mutex mutex_;
     std::condition_variable cond_;
     std::atomic<bool> stop_;
